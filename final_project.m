@@ -199,26 +199,33 @@ ylabel('Amplitude')
 legend('theroretical','analytic')
 %%
 %2
-tau_sample_vec = 0:0.1:20;
+tau_sample_vec = 0:0.2:10;
 theoretical_R_X_tau = (standard_deviation^2/(2*alpha))*(exp(-alpha*abs(tau_sample_vec)));
 ts = 3/step_size;
-time_mean_X = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , rel_rows);
+time_mean_X_1 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 1);
+time_mean_X_5 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 5);
+time_mean_X_10 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 10);
+time_mean_X_100 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 100);
 %%
 figure(6)
 plot(tau_sample_vec, theoretical_R_X_tau , '--')
-% plot(tau_sample_vec , mean(time_mean_X(:,round(length(time_mean_X)/10):round(length(time_mean_X)/10):length(time_mean_X)),2),"*",'LineWidth',1.5)
 hold on
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+100),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+250),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+500),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+1000),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+2500),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+10000),2))
+% plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+100),2))
+% plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+250),2))
+% plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+500),2))
+% plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+1000),2))
+% plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+2500),2))
+% plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+10000),2))
+
+plot(tau_sample_vec ,mean(time_mean_X_1(:,ts:end),2))
+plot(tau_sample_vec ,mean(time_mean_X_5(:,ts:end),2))
+plot(tau_sample_vec ,mean(time_mean_X_10(:,ts:end),2))
+plot(tau_sample_vec ,mean(time_mean_X_100(:,ts:end),2))
 
 
-xlim([0 15])
+xlim([0 10])
 % legend("calculation - mean of all realizations" , 'calculation - a few realizations')
-legend("theory" , '100 realizations ','250 realizations','500 realizations', '1000 realizations',' 2500 realizations', '10K realizations')
+legend("theory" , '1 realizations ','5 realizations','10 realizations', '100 realizations')
 hold off
 xlabel("\tau [sec]")
 ylabel('Amplitude')
@@ -598,10 +605,12 @@ function[time_avg] = calc_time_avg(data_matrix)
     end
 end
 function[f,peri_ensemble_data_1 ,peri_ensemble_data_2 , peri_ensemble_data_1_2 , peri_data_1,peri_data_2,peri_data_1_2] = calc_periodogram(step_size,t,ts,data_1,data_2)
-    K = 1:1:length(t(ts:end));
-     R = 1/step_size;
-    N = length(t(ts:end));
-    f = (R*K)/N;
+%     K = 1:1:length(t(ts:end));
+%     R = 1/step_size;
+%     N = length(t(ts:end));
+%     f = (R*K)/N;
+    f = 0.01:0.1:10;
+
     
     data_1_after_noise = data_1(:,ts:end);
 %     transformed_data_1_arr = fft(data_1_after_noise');
@@ -614,8 +623,10 @@ function[f,peri_ensemble_data_1 ,peri_ensemble_data_2 , peri_ensemble_data_1_2 ,
 
     if mean(mean(data_2),2) ~= 0
         data_2_after_noise = data_2(:,ts:end);
-        transformed_data_2_arr = fft(data_2_after_noise');
-        transformed_data_2_arr = transformed_data_2_arr';
+%         transformed_data_2_arr = fft(data_2_after_noise');
+%         transformed_data_2_arr = transformed_data_2_arr';
+        [transformed_data_2_arr,~] = dft(data_2_after_noise,t,f,step_size,ts);
+
         
         peri_data_1_2 = (1/width(data_1_after_noise)) * (transformed_data_1_arr.*conj(transformed_data_2_arr));
         peri_data_2 = (1/width(transformed_data_2_arr)) * abs(transformed_data_2_arr).^2;
@@ -672,11 +683,11 @@ function[corr_coeff] = calc_corr(step_size,tau_samples,u,z)
 end
 
 function[transformed_data,transformed_data_tweaked] = dft(data,t,f,step_size,ts)
-    transformed_data = zeros([size(data)]) ;
-    n = 1:1:length(f);
+    transformed_data = zeros(height(data),length(f)) ;
+    n = 0:1:length(f)-1;
     for i = 1:1:height(data)
-        for j = 1:1:width(data)
-            transformed_data(i,j) = sum(data(i,:).* exp( (-2j * pi .* j .* n) ./ length(f) ));
+        for j = 1:1:width(f)
+            transformed_data(i,j) = sum(data(i,:).* exp( (-2j * pi .* j .* n(j)) ./ length(f) ));
         end
         disp(i)
     end
