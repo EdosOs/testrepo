@@ -2,8 +2,8 @@ clc;
 clear all ;
 close all;
 %%
-DOF_data = importdata('C:\Users\gilim\Documents\studies\MATLAB\Semester 5\stochastic processes\DOF_measurements.txt');
-I_data = importdata('C:\Users\gilim\Documents\studies\MATLAB\Semester 5\stochastic processes\I_measurements.txt')';
+DOF_data = importdata('DOF_measurements.txt');
+I_data = importdata('I_measurements.txt')';
 %%
 DOF_data.data=DOF_data.data';
 I_data.data = I_data.data';
@@ -130,8 +130,8 @@ sgtitle('correlation coefficient as a function of time difference for each inert
 % Define the time axis
 rel_rows = 1000;
 alpha = 0.5;
-beta = 1;
-t_final = 500;
+beta = 2;
+t_final = 100;
 step_size= 1e-2;
 standard_deviation = 1;
 x_0 = 0;
@@ -199,34 +199,38 @@ ylabel('Amplitude')
 legend('theroretical','analytic')
 %%
 %2
-tau_sample_vec = 0:0.1:20;
+tau_sample_vec = 0:0.2:10;
 theoretical_R_X_tau = (standard_deviation^2/(2*alpha))*(exp(-alpha*abs(tau_sample_vec)));
 ts = 3/step_size;
-time_mean_X = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , rel_rows);
+time_mean_X_1 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 1);
+time_mean_X_5 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 5);
+time_mean_X_10 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 10);
+time_mean_X_100 = calc_time_mean(tau_sample_vec , step_size , t , ts , data_matrix , 100);
 %%
 figure(6)
 plot(tau_sample_vec, theoretical_R_X_tau , '--')
-% plot(tau_sample_vec , mean(time_mean_X(:,round(length(time_mean_X)/10):round(length(time_mean_X)/10):length(time_mean_X)),2),"*",'LineWidth',1.5)
 hold on
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+100),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+250),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+500),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+1000),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+2500),2))
-plot(tau_sample_vec ,mean(time_mean_X(:,ts:ts+10000),2))
+
+plot(tau_sample_vec ,mean(time_mean_X_1(:,ts:end),2))
+plot(tau_sample_vec ,mean(time_mean_X_5(:,ts:end),2))
+plot(tau_sample_vec ,mean(time_mean_X_10(:,ts:end),2))
+plot(tau_sample_vec ,mean(time_mean_X_100(:,ts:end),2))
+legend("theory" , '1 realizations ','5 realizations','10 realizations', '100 realizations')
 
 
-xlim([0 15])
+xlim([0 10])
 % legend("calculation - mean of all realizations" , 'calculation - a few realizations')
-legend("theory" , '100 realizations ','250 realizations','500 realizations', '1000 realizations',' 2500 realizations', '10K realizations')
 hold off
 xlabel("\tau [sec]")
 ylabel('Amplitude')
 title('autocorrelation of X as a function of Tau')
 %%
+% [Pxx,~,~,f_new] = dft_periodogram(data_matrix(1:10,:),z_arr(1:10,:),1);
+dft_matrix = create_dft_matrix(width(data_matrix)-ts+1);
+%%
 %1.1.D
 %numerical sol
-[f,peri_ensemble_X , peri_ensemble_Z ,peri_ensemble_X_Z, peri_X ,peri_Z,peri_X_Z] = calc_periodogram(step_size,t,ts,data_matrix,z_arr);
+[f,peri_ensemble_X , peri_ensemble_Z ,peri_ensemble_X_Z, peri_X ,peri_Z,peri_X_Z] = calc_periodogram(step_size,t,ts,data_matrix,z_arr,dft_matrix);
 
 %%
 %analytical sol
@@ -240,7 +244,7 @@ S_X_theory = (standard_deviation/sqrt(step_size))^2*((alpha^2+(2*pi*f).^2)).^-1;
 figure(8)
 semilogx(f , 20*log10(step_size*peri_ensemble_X))
 hold on
-% semilogx(f , 20*log10(S_X_theory))
+semilogx(f , 20*log10(S_X_theory))
 xlim([10^-2 10])
 hold off
 title('ensemble avg of PSD X')
@@ -283,7 +287,7 @@ title('Calculated coherence as a function of frequency')
 xlabel("Frequency [Hz]")
 ylabel('Amplitude')
 xlim([10^-2 10])
-ylim([0.98 1.02])
+ylim([0.9 1.1])
 
 
 %%
@@ -309,18 +313,22 @@ xlabel('Final value')
 ylabel('# of realizations')
 %%
 %1.1.B.2
-Y_ensemble_avg = mean(Y_data_matrix);
 rms_Y_ensemble = rms(mean(Y_data_matrix(:,:)));
 %%
 figure(14)
-plot(t,Y_ensemble_avg)
+plot(t,mean(Y_data_matrix))
+hold on
+plot(t,mean(Y_data_matrix(1:100,:)))
+plot(t,mean(Y_data_matrix(1:10,:)))
+
+hold off
 title('Ensemble average')
-Y_time_avg = calc_time_avg(Y_data_matrix);
+legend('1000 realizations','100 realizations','10 realizations')
 xlabel("Time [sec]")
 ylabel('Amplitude')
-
+%%
 figure(15)
-plot(t, Y_time_avg)
+plot(t, calc_time_avg(Y_data_matrix))
 title('time average as a function of time')
 xlabel("Time [sec]")
 ylabel('Amplitude')
@@ -329,10 +337,12 @@ rms_Y_time = rms(mean(Y_time_avg(:,end)));
 %%
 %1.1.C
 % 1
-% R_Y_theo = (standard_deviation^2)/(beta^2/alpha^2)*(exp(-alpha*abs);
+R_Y_theo = -(standard_deviation^2)*(beta*exp(-alpha*(2*t*0))-alpha*exp(-beta*(2*t))) / ((alpha^2-beta^2)*(4*alpha*beta));
 R_Y = mean(Y_data_matrix.^2)*step_size;
 figure(16)
 plot(t,R_Y)
+hold on 
+plot(t,R_Y_theo)
 title('Ensemble average for the autocorrelation function of Y')
 xlim([0 40])
 hold off
@@ -340,20 +350,37 @@ xlabel("Time [sec]")
 ylabel('Amplitude')
 %%
 % 2
-ts = 6/step_size;
-tau_sample_vec_Y = 0:0.1:20;
-time_mean_Y = calc_time_mean(tau_sample_vec_Y , step_size , t , ts , Y_data_matrix , rel_rows);
+ts = 3/step_size;
+tau_sample_vec_Y = 0:0.5:20;
+time_mean_Y_1 = calc_time_mean(tau_sample_vec_Y , step_size , t , ts , Y_data_matrix , 1);
+time_mean_Y_5 = calc_time_mean(tau_sample_vec_Y , step_size , t , ts , Y_data_matrix , 5);
+time_mean_Y_10 = calc_time_mean(tau_sample_vec_Y , step_size , t , ts , Y_data_matrix , 10);
+time_mean_Y_100 = calc_time_mean(tau_sample_vec_Y , step_size , t , ts , Y_data_matrix , 100);
+time_mean_Y_1000 = calc_time_mean(tau_sample_vec_Y , step_size , t , ts , Y_data_matrix , 1000);
+
 %%
+% R_Y_theo_tau = -(standard_deviation^2)*(beta*exp(-alpha*(tau_sample_vec_Y))-alpha*exp(-beta*(2*t+tau_sample_vec_Y))) / ((alpha^2-beta^2)*(4*alpha*beta));
+R_Y_theo_tau = -(standard_deviation^2)*(beta*exp(-alpha*(tau_sample_vec_Y))) / ((alpha^2-beta^2)*(4*alpha*beta));
+R_Y_theo_tau = -(standard_deviation^2)*(beta*exp(-alpha*(tau_sample_vec_Y))-alpha*exp(-beta*(tau_sample_vec_Y))) / ((alpha^2-beta^2)*(2*alpha*beta));
+
 figure(17)
-plot(tau_sample_vec_Y , mean(time_mean_Y(:,round(length(time_mean_Y)/10):round(length(time_mean_Y)/10):round(length(time_mean_Y))),2),"-*",'LineWidth',1.5)
+plot(tau_sample_vec_Y,R_Y_theo_tau ,'--')
+
 hold on
-plot(tau_sample_vec_Y , (time_mean_Y(:,round(length(time_mean_Y)/20):round(length(time_mean_Y)/20):round(length(time_mean_Y)/2))))
-xlim([0 15])
-legend("calculation - mean of all realizations" , 'calculation - a few realizations')
+plot(tau_sample_vec_Y ,mean(time_mean_Y_1(:,ts:end),2))
+plot(tau_sample_vec_Y ,mean(time_mean_Y_5(:,ts:end),2))
+plot(tau_sample_vec_Y ,mean(time_mean_Y_10(:,ts:end),2))
+plot(tau_sample_vec_Y ,mean(time_mean_Y_100(:,ts:end),2))
+plot(tau_sample_vec_Y ,mean(time_mean_Y_1000(:,ts:end),2))
+legend("theory" , '1 realizations ','5 realizations','10 realizations', '100 realizations')
+
+xlim([0 20])
+ylim([-1 2])
 hold off
 xlabel("\tau [sec]")
 ylabel('Amplitude')
 title('autocorrelation of Y as a function of Tau')
+%%
 %1.1.D
 [f,peri_ensemble_X,peri_ensemble_Y ,peri_ensemble_X_Y,peri_X,peri_Y,peri_X_Y] = calc_periodogram(step_size,t,ts,data_matrix,Y_data_matrix);
 figure(18)
@@ -597,17 +624,23 @@ function[time_avg] = calc_time_avg(data_matrix)
         end
     end
 end
-function[f,peri_ensemble_data_1 ,peri_ensemble_data_2 , peri_ensemble_data_1_2 , peri_data_1,peri_data_2,peri_data_1_2] = calc_periodogram(step_size,t,ts,data_1,data_2)
-    K = 1:1:length(t(ts:end));
-%     R = 1/step_size;
-    R = 1/step_size;
-    N = length(t(ts:end));
+function[f,peri_ensemble_data_1 ,peri_ensemble_data_2 , peri_ensemble_data_1_2 , peri_data_1,peri_data_2,peri_data_1_2] = calc_periodogram(step_size,t,ts,data_1,data_2,dft_matrix)
+    N = length(t(ts:end));%samples in time
+    K = 1:1:N;%pos in list
+    R = 1/step_size;%sampling rate
+%     K = 1:1:(10*N/R);%pos in list
     f = (R*K)/N;
+%     f = 0.01:0.1:10;
+%     % Compute the frequency bins
+%     N = size(data_1, 2);
+%     Fs = 1; % Sampling frequency (Hz)
+%     f = Fs*(0:(N/2))/N;
     
     data_1_after_noise = data_1(:,ts:end);
 %     transformed_data_1_arr = fft(data_1_after_noise');
-    [transformed_data_1_arr,~] = dft(data_1_after_noise,t,f,step_size,ts);
+%     [transformed_data_1_arr,~] = dft(data_1_after_noise,t,f,step_size,ts);
 %     transformed_data_1_arr = transformed_data_1_arr';
+    [transformed_data_1_arr] = (dft_matrix*(data_1_after_noise(:,:)'))';
 
     % preallocation 
     peri_data_1 = (1/width(transformed_data_1_arr)) * abs(transformed_data_1_arr).^2;
@@ -615,8 +648,13 @@ function[f,peri_ensemble_data_1 ,peri_ensemble_data_2 , peri_ensemble_data_1_2 ,
 
     if mean(mean(data_2),2) ~= 0
         data_2_after_noise = data_2(:,ts:end);
-        transformed_data_2_arr = fft(data_2_after_noise');
-        transformed_data_2_arr = transformed_data_2_arr';
+%         transformed_data_2_arr = fft(data_2_after_noise');
+%         transformed_data_2_arr = transformed_data_2_arr';
+%         [transformed_data_2_arr,~] = dft(data_2_after_noise,t,f,step_size,ts);
+%         [transformed_data_2_arr] = comp_dft(data_2_after_noise(1:10,:));
+        [transformed_data_2_arr] = (dft_matrix*(data_2_after_noise(:,:)'))';
+
+
         
         peri_data_1_2 = (1/width(data_1_after_noise)) * (transformed_data_1_arr.*conj(transformed_data_2_arr));
         peri_data_2 = (1/width(transformed_data_2_arr)) * abs(transformed_data_2_arr).^2;
@@ -673,11 +711,12 @@ function[corr_coeff] = calc_corr(step_size,tau_samples,u,z)
 end
 
 function[transformed_data,transformed_data_tweaked] = dft(data,t,f,step_size,ts)
-    transformed_data = zeros([size(data)]) ;
-    n = 1:1:length(f);
-    for i = 1:1:height(data)
-        for j = 1:1:width(data)
-            transformed_data(i,j) = sum(data(i,:).* exp( (-2j * pi .* j .* n) ./ length(f) ));
+    transformed_data = zeros(height(data),length(f)) ;
+    dft_mat = zeros(data);
+    n = 0:1:length(f)-1;
+    for i = 1:1:10
+        for j = 1:1:width(f)
+            transformed_data(i,j) = sum(data(i,:).* exp( (-2j * pi .* j .* n(j)) ./ length(f) ));
         end
         disp(i)
     end
@@ -688,6 +727,72 @@ function[transformed_data,transformed_data_tweaked] = dft(data,t,f,step_size,ts)
 end
 
 
+% Compute the DFT coefficients for each signal
+function[dft_coeffs,f] = comp_dft(data)
+    dft_coeffs = zeros(size(data));
+    for i = 1:size(data,1)
+        for k = 1:size(data,2)
+            dft_coeffs(i,k) = sum(data(i,:).*exp(-2*pi*1i*(k-1)*(0:size(data,2)-1)/(size(data,2))));
+        end
+    end
+
+end
+function X = dft_single(x)
+% DFT calculation without using built-in function
+% Input: x - Input signal
+% Output: X - DFT of the input signal
+
+N = length(x);  % Length of the signal
+X = zeros(1, N); % Allocate memory for the output signal
+
+    for k = 1:N % For each frequency component
+        for n = 1:N % For each time sample
+            X(k) = X(k) + x(n)*exp(-1j*2*pi*(k-1)*(n-1)/N); % DFT equation
+        end
+    end
+end
 
 
 
+function [Pxx,Pyy,Pxy, f] = dft_periodogram(x, y, fs)
+% DFT calculation and periodogram without using built-in function
+% Inputs:
+%   x - Input signal matrix of size M by N
+%   y - Input signal matrix of size M by N
+%   fs - Sampling rate in Hz
+% Outputs:
+%   Pxx - Power spectral density estimate (periodogram)
+%   f - Frequency vector in Hz
+    
+    [M, N] = size(x);  % Size of the input signal matrix
+    Pxx = zeros(M, N); % Allocate memory for the output periodogram
+
+    for m = 1:M % For each row of the input signal matrices
+        for n = 1:N % For each time sample
+            X = 0; Y = 0;
+            for k = 1:N % For each frequency component
+                X = X + x(m, k)*exp(-1j*2*pi*(k-1)*(n-1)/N); % DFT equation for signal x
+                Y = Y + y(m, k)*exp(-1j*2*pi*(k-1)*(n-1)/N); % DFT equation for signal y
+            end
+            Pxx_yy(m, :) = Pxx_yy(m, :) + (abs(X)^2 + abs(Y)^2)/(N*fs); % Periodogram calculation
+            Pxx(m, :) = Pxx(m, :) + (abs(X)^2)/(N*fs); % Periodogram calculation
+            Pyy(m, :) = Pyy(m, :) + (abs(X)^2 + abs(Y)^2)/(N*fs); % Periodogram calculation
+            Pxy(m, :) = Pxy(m, :) + (abs(X * Y))/(N*fs); % Periodogram calculation
+        end
+        f = (0:N/2) * fs / N; % Frequency vector in Hz
+    end
+end
+
+function DFT_matrix = create_dft_matrix(N)
+    % Create a vector of indices from 0 to N-1
+    n = 0:N-1;
+    
+    % Calculate the DFT matrix using the formula
+    W = exp(-1i*2*pi/N);
+    DFT_matrix = zeros(N,N);
+    for k=0:N-1
+        for j=0:N-1
+            DFT_matrix(k+1,j+1) = W^(k*j);
+        end
+    end
+end
